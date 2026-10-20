@@ -42,6 +42,36 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         mainWindow.rootViewController = appDelegate.loadingViewController
         mainWindow.makeKeyAndVisible()
         appDelegate.signalWindowReady()
+        
+        /// Handle links which launched the app
+        if let url: URL = connectionOptions.urlContexts.first?.url ?? connectionOptions.userActivities.first?.webpageURL {
+            handleDeepLink(url)
+        }
+    }
+    
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url: URL = URLContexts.first?.url else { return }
+        
+        handleDeepLink(url)
+    }
+    
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        guard
+            userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+            let url: URL = userActivity.webpageURL
+        else { return }
+        
+        handleDeepLink(url)
+    }
+    
+    /// The links are handled once the app is ready (on a cold launch the home screen doesn't exist yet)
+    private func handleDeepLink(_ url: URL) {
+        guard let appDelegate else { return }
+        
+        Task { @MainActor [dependencies = appDelegate.dependencies] in
+            await dependencies[singleton: .appReadiness].isReady()
+            appDelegate.handleDeepLink(url)
+        }
     }
     
     func sceneWillEnterForeground(_ scene: UIScene) {

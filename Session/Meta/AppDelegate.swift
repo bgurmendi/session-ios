@@ -801,8 +801,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     // MARK: - App Link
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        return handleDeepLink(url)
+    }
+    
+    /// Handles `sessionmessenger://DM?sessionID=<id>`, `sessionmessenger://add#<id>` and the universal link
+    /// `https://bgurmendi.github.io/add/#<id>` by opening the new message screen with the account id prefilled
+    @discardableResult
+    func handleDeepLink(_ url: URL) -> Bool {
         guard let components: URLComponents = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
             return false
+        }
+        
+        if let sessionId: String = ContactLink.accountId(from: url) {
+            createNewDMFromDeepLink(sessionId: sessionId)
+            return true
         }
         
         // URL Scheme is sessionmessenger://DM?sessionID=1234
@@ -1101,6 +1113,39 @@ public enum LifecycleMethod: Equatable {
             case (.enterForeground, .enterForeground): return true
             case (.didBecomeActive, .didBecomeActive): return true
             default: return false
+        }
+    }
+}
+
+// MARK: - ContactLink
+
+/// Link used to share a contact: `https://bgurmendi.github.io/add/#<accountId>` (landing page which opens
+/// `sessionmessenger://add#<accountId>` or the app directly via universal links)
+enum ContactLink {
+    // stringlint:ignore_start
+    static let webHost: String = "bgurmendi.github.io"
+    static let webPath: String = "/add/"
+    private static let webPaths: [String] = ["/add/", "/add-debug/"]
+    private static let appScheme: String = "sessionmessenger"
+    private static let appHost: String = "add"
+    // stringlint:ignore_stop
+    
+    static func url(accountId: String) -> String {
+        return "https://\(webHost)\(webPath)#\(accountId)"
+    }
+    
+    static func accountId(from url: URL) -> String? {
+        guard
+            let components: URLComponents = URLComponents(url: url, resolvingAgainstBaseURL: true),
+            let fragment: String = components.fragment,
+            fragment.count == 66,
+            fragment.allSatisfy({ $0.isHexDigit })
+        else { return nil }
+        
+        switch (components.scheme?.lowercased(), components.host?.lowercased()) {
+            case (appScheme, appHost): return fragment
+            case ("https", webHost) where webPaths.contains(components.path): return fragment
+            default: return nil
         }
     }
 }

@@ -123,7 +123,7 @@ struct InviteAFriendScreen: View {
     }
     
     private func share() {
-        let invitation: String = "Hey, I've been using Session to chat with complete privacy and security. Come join me! My Account ID is \n\n\(self.accountId) \n\nDownload it at https://getsession.org/"
+        let invitation: String = ContactLink.url(accountId: self.accountId)
         let shareVC: UIActivityViewController = UIActivityViewController(
             activityItems: [ invitation ],
             applicationActivities: nil

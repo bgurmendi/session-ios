@@ -530,9 +530,7 @@ class SettingsViewModel: SessionListScreenContent.ViewModelType, NavigationItemS
                         )
                     ),
                     onTap: { [weak viewModel] in
-                        let invitation: String = "accountIdShare"
-                            .put(key: "account_id", value: state.profile.id)
-                            .localized()
+                        let invitation: String = ContactLink.url(accountId: state.profile.id)
                         
                         viewModel?.transitionToScreen(
                             UIActivityViewController(
